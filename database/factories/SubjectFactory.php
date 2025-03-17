@@ -11,7 +11,7 @@ class SubjectFactory extends Factory
 
     public function definition(): array
     {
-        $subject = $this->faker->randomElement([
+        $subjects = [
             'Mathematics' => 'MATH',
             'Physics' => 'PHY',
             'Chemistry' => 'CHEM',
@@ -19,11 +19,15 @@ class SubjectFactory extends Factory
             'English' => 'ENG',
             'History' => 'HIST',
             'Geography' => 'GEO',
-        ]);
+        ];
+
+        // Get a random key-value pair
+        $name = $this->faker->randomElement(array_keys($subjects));
+        $code = $subjects[$name];
 
         return [
-            'name' => key($subject),
-            'code' => current($subject) . $this->faker->unique()->numberBetween(100, 999),
+            'name' => $name,
+            'code' => $code . $this->faker->unique()->numberBetween(100, 999),
             'description' => $this->faker->sentence(),
         ];
     }

@@ -3,10 +3,10 @@
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Foundation\Testing\Concerns\CreatesApplication;
 
 abstract class TestCase extends BaseTestCase
 {
-    use CreatesApplication;
 
     protected const TEST_SUBJECTS = [
         'Mathematics' => 'MATH101',
