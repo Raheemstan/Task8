@@ -8,11 +8,24 @@ use Illuminate\Support\Collection;
 use App\Jobs\ProcessAbsenceNotifications;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Builder;
+use App\Exceptions\AttendanceException;
 
 class AttendanceService
 {
     public function markBulkAttendance(array $attendances): Collection
     {
+        // Check for duplicates in the request
+        $duplicates = collect($attendances)
+            ->groupBy(fn($record) => "{$record['student_id']}_{$record['subject_id']}_{$record['date']}")
+            ->filter(fn($group) => $group->count() > 1);
+
+        if ($duplicates->isNotEmpty()) {
+            throw new \App\Exceptions\AttendanceException(
+                'Duplicate attendance records found in request'
+            );
+        }
+
         return collect($attendances)->map(function ($record) {
             return $this->createAttendanceRecord($record);
         });
@@ -28,16 +41,49 @@ class AttendanceService
 
     private function createAttendanceRecord(array $data): Attendance
     {
-        $attendance = Attendance::create($data);
+        try {// Assuming $data contains the new attendance record
+            $attendanceData = $data;  // The new data for attendance (e.g., student_id, subject_id, date)
+            
+            $existingAttendance = Attendance::where('student_id', $attendanceData['student_id'])
+                                             ->where('subject_id', $attendanceData['subject_id'])
+                                             ->where('date', $attendanceData['date'])
+                                             ->first();
+            
+            if ($existingAttendance) {
+                // If attendance already exists, you can return a message or handle it as needed
+              throw AttendanceException::duplicateAttendance(
+                $data['student_id'],
+                $data['date'],
+                $data['subject_id']
+              );
+            } else {
+                // If no existing attendance record, create a new one
+                $attendance = Attendance::create($attendanceData);
+            
+            if ($attendance->status === 'absent') {
+                ProcessAbsenceNotifications::dispatch($attendance->student);
+            }
 
-        if ($attendance->status === 'absent') {
-            ProcessAbsenceNotifications::dispatch($attendance->student);
+            $this->clearCache($attendance);
+            $this->logAttendance($attendance);
+
+            return $attendance;
+                
+            }
+            
+
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Check if it's a unique constraint violation
+            if ($e->errorInfo[1] === 19) { // SQLite unique constraint error code
+                throw AttendanceException::duplicateAttendance(
+                    $data['student_id'],
+                    $data['date'],
+                    $data['subject_id']
+                );
+            }
+            throw $e;
         }
-
-        $this->clearCache($attendance);
-        $this->logAttendance($attendance);
-
-        return $attendance;
     }
 
     private function clearCache(Attendance $attendance): void
@@ -67,6 +113,16 @@ class AttendanceService
 
     private function generateStudentReport(Student $student): array
     {
+        // First get the student with relationships
+        $student = Student::with([
+            'class:id,name,grade,section',
+            'attendances' => function ($query) {
+                $query->with('subject:id,name')
+                    ->latest('date')
+                    ->take(10);
+            }
+        ])->findOrFail($student->id);
+
         return [
             'student' => $student->only(['id', 'name']),
             'class' => $student->class->only(['id', 'name', 'grade', 'section']),
@@ -80,11 +136,12 @@ class AttendanceService
                     now()->endOfQuarter()
                 ])
                 ->count(),
-            'recent_attendance' => $student->attendances()
-                ->with(['student:id,name', 'subject:id,name'])
-                ->latest('date')
-                ->take(10)
-                ->get()
+            'recent_attendance' => $student->attendances->map(fn($attendance) => [
+                'id' => $attendance->id,
+                'date' => $attendance->date,
+                'status' => $attendance->status,
+                'subject' => $attendance->subject->only(['id', 'name'])
+            ])
         ];
     }
 } 

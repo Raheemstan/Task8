@@ -10,14 +10,8 @@ use App\Http\Controllers\Controller;
 use App\Repositories\AttendanceRepository;
 use App\Http\Requests\BulkAttendanceRequest;
 use App\Http\Requests\SingleAttendanceRequest;
-
-/**
- * @OA\Info(
- *     version="1.0.0",
- *     title="Student Attendance API",
- *     description="API for managing student attendance"
- * )
- */
+use Illuminate\Support\Facades\Log;
+use App\Exceptions\AttendanceException;
 
 class AttendanceController extends Controller
 {
@@ -26,51 +20,22 @@ class AttendanceController extends Controller
         private readonly AttendanceRepository $attendanceRepository
     ) {}
 
-    /**
-     * Mark attendance for multiple students
-     * 
-     * @param BulkAttendanceRequest $request
-     * @return JsonResponse
-     */
-    /**
-     * @OA\Post(
-     *     path="/api/v1/attendance/bulk",
-     *     summary="Mark attendance for multiple students",
-     *     @OA\RequestBody(
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(
-     *                 property="attendances",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     type="object",
-     *                     @OA\Property(property="student_id", type="integer"),
-     *                     @OA\Property(property="date", type="string", format="date"),
-     *                     @OA\Property(property="status", type="string", enum={"present", "absent"}),
-     *                     @OA\Property(property="subject", type="string")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(response="201", description="Attendance marked successfully"),
-     *     @OA\Response(response="422", description="Validation error"),
-     *     security={{"sanctum": {}}}
-     * )
-     */
     public function markBulkAttendance(BulkAttendanceRequest $request): JsonResponse
     {
         try {
             $attendances = $this->attendanceService->markBulkAttendance(
                 $request->validated('attendances')
             );
+            Log::info('Attendance marked successfully', ['attendances' => $attendances]);
 
             return response()->json([
                 'message' => 'Attendance marked successfully',
                 'data' => $attendances
             ], 201);
-        } catch (\Exception $e) {
-            report($e);
-            throw $e;
+        } catch (AttendanceException $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 422);
         }
     }
 
@@ -93,9 +58,10 @@ class AttendanceController extends Controller
                 'message' => 'Attendance marked successfully',
                 'data' => $attendance
             ], 201);
-        } catch (\Exception $e) {
-            report($e);
-            throw $e;
+        } catch (AttendanceException $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 422);
         }
     }
 
@@ -107,6 +73,7 @@ class AttendanceController extends Controller
      */
     public function getReport(Student $student): JsonResponse
     {
+        Log::info('Getting attendance report for student', ['student' => $student->id]);
         return response()->json(
             $this->attendanceService->getStudentReport($student)
         );
@@ -120,8 +87,20 @@ class AttendanceController extends Controller
      */
     public function getClassReport(SchoolClass $class): JsonResponse
     {
-        return response()->json(
-            $this->attendanceRepository->getClassAttendance($class, request('date', now()->toDateString()))
-        );
+        try {
+            $date = request('date', now()->toDateString());
+            $report = $this->attendanceRepository->getClassAttendance($class, $date);
+            
+            return response()->json($report);
+        } catch (\Exception $e) {
+            Log::error('Failed to generate class report', [
+                'class_id' => $class->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to generate report'
+            ], 500);
+        }
     }
 } 

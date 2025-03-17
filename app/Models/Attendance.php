@@ -16,7 +16,6 @@ class Attendance extends Model
         'subject_id',
         'date',
         'status', // present, absent
-        'subject',
     ];
 
     protected $casts = [

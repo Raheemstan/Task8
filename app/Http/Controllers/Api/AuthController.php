@@ -8,42 +8,28 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
         try {
-            Log::info('Starting user registration', ['email' => $request->email]);
-
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:8|confirmed',
             ]);
 
-            if (!$user) {
-                Log::error('Failed to create user', ['email' => $request->email]);
-                throw new \Exception('Failed to create user');
-            }
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
 
-            try {
-                $token = $user->createToken('auth_token')->plainTextToken;
-            } catch (\Exception $e) {
-                Log::error('Failed to create auth token', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage()
-                ]);
-                throw new \Exception('Failed to create authentication token');
-            }
+            $token = $user->createToken('auth_token')->plainTextToken;
 
-            Log::info('User registered successfully', ['user_id' => $user->id]);
-
+            Log::info('User registered successfully', ['user' => $user, 'token' => $token]);
             return response()->json([
                 'message' => 'User registered successfully',
                 'data' => [
@@ -51,19 +37,12 @@ class AuthController extends Controller
                     'token' => $token,
                 ]
             ], 201);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::warning('Validation error during registration', [
-                'email' => $request->email,
+        } catch (ValidationException $e) {
+            Log::error('Validation failed', ['errors' => $e->errors()]);
+            return response()->json([
+                'message' => 'Validation failed',
                 'errors' => $e->errors()
-            ]);
-            throw $e;
-        } catch (\Exception $e) {
-            Log::error('Unexpected error during registration', [
-                'email' => $request->email,
-                'error' => $e->getMessage()
-            ]);
-            throw new \Exception('Registration failed. Please try again later.');
+            ], 422);
         }
     }
 
@@ -72,12 +51,15 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
+            Log::error('Invalid credentials', ['email' => $request->email]);
             return response()->json([
                 'message' => 'Invalid credentials'
             ], 401);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        Log::info('User logged in successfully', ['user' => $user, 'token' => $token]);
 
         return response()->json([
             'message' => 'Logged in successfully',
@@ -92,8 +74,10 @@ class AuthController extends Controller
     {
         auth()->user()->tokens()->delete();
 
+        Log::info('User logged out successfully');
+
         return response()->json([
             'message' => 'Logged out successfully'
         ]);
     }
-} 
+}

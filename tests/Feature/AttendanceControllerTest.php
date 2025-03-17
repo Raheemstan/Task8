@@ -41,7 +41,6 @@ class AttendanceControllerTest extends TestCase
         $this->subject = Subject::factory()->create();
     }
 
-    /** @test */
     public function it_can_mark_bulk_attendance()
     {
         $students = Student::factory(3)->create(['class_id' => $this->class->id]);
@@ -78,7 +77,6 @@ class AttendanceControllerTest extends TestCase
         Queue::assertPushed(ProcessAbsenceNotifications::class, 3);
     }
 
-    /** @test */
     public function it_can_mark_single_student_attendance()
     {
         $student = Student::factory()->create(['class_id' => $this->class->id]);
@@ -110,7 +108,6 @@ class AttendanceControllerTest extends TestCase
         Queue::assertPushed(ProcessAbsenceNotifications::class);
     }
 
-    /** @test */
     public function it_can_get_student_attendance_report()
     {
         $student = Student::factory()->create();
@@ -133,7 +130,6 @@ class AttendanceControllerTest extends TestCase
         $this->assertEquals(5, $response->json('total_absences'));
     }
 
-    /** @test */
     public function it_can_get_class_attendance_report()
     {
         $class = '10A';
@@ -178,7 +174,7 @@ class AttendanceControllerTest extends TestCase
         $this->assertEquals(5, $response->json('attendance_summary.absent'));
     }
 
-    /** @test */
+
     public function it_validates_bulk_attendance_input()
     {
         $response = $this->postJson('/api/v1/attendance/bulk', [
@@ -201,7 +197,7 @@ class AttendanceControllerTest extends TestCase
             ]);
     }
 
-    /** @test */
+
     public function it_validates_single_attendance_input()
     {
         $student = Student::factory()->create();
@@ -220,7 +216,7 @@ class AttendanceControllerTest extends TestCase
             ]);
     }
 
-    /** @test */
+
     public function it_enforces_authentication()
     {
         // Clear authenticated user
@@ -231,7 +227,7 @@ class AttendanceControllerTest extends TestCase
         $response->assertStatus(401);
     }
 
-    /** @test */
+
     public function it_handles_rate_limiting()
     {
         // Make 61 requests (exceeding the 60 per minute limit)
@@ -244,7 +240,7 @@ class AttendanceControllerTest extends TestCase
         $response->assertStatus(429); // Too Many Requests
     }
 
-    /** @test */
+
     public function it_caches_attendance_reports()
     {
         $student = Student::factory()->create();

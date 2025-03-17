@@ -2,9 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Models\Student;
 use App\Models\SchoolClass;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class AttendanceRepository
@@ -14,32 +12,42 @@ class AttendanceRepository
         return Cache::remember(
             "class.{$class->id}.attendance.{$date}",
             now()->addHours(1),
-            fn () => $this->generateClassReport($class, $date)
+            fn() => $this->generateClassReport($class, $date)
         );
     }
 
     private function generateClassReport(SchoolClass $class, string $date): array
     {
-        $students = $class->students()->with(['attendances' => function ($query) use ($date) {
-            $query->whereDate('date', $date);
-        }])->get();
+        $students = SchoolClass::with([
+            'students' => function($query) use ($date) {
+                $query->select('id', 'name', 'class_id')
+                    ->with(['attendances' => function($query) use ($date) {
+                        $query->whereDate('date', $date)
+                            ->select('id', 'student_id', 'status');
+                    }]);
+            }
+        ])
+        ->findOrFail($class->id)
+        ->students;
 
         return [
             'class' => $class->only(['id', 'name', 'grade', 'section']),
             'total_students' => $students->count(),
             'attendance_summary' => [
-                'present' => $students->flatMap->attendances->where('status', 'present')->count(),
-                'absent' => $students->flatMap->attendances->where('status', 'absent')->count(),
+                'present' => $students->flatMap->attendances
+                    ->where('status', 'present')
+                    ->count(),
+                'absent' => $students->flatMap->attendances
+                    ->where('status', 'absent')
+                    ->count(),
             ],
-            'student_details' => $students->map(function ($student) {
-                return [
-                    'id' => $student->id,
-                    'name' => $student->name,
-                    'monthly_absences' => $student->absences()
-                        ->whereMonth('date', now()->month)
-                        ->count(),
-                ];
-            }),
+            'student_details' => $students->map(fn($student) => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'monthly_absences' => $student->absences()
+                    ->whereMonth('date', now()->month)
+                    ->count(),
+            ])
         ];
     }
-} 
+}

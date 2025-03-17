@@ -10,8 +10,8 @@ class SingleAttendanceRequest extends FormRequest
     {
         return [
             'date' => ['required', 'date', 'before_or_equal:today'],
-            'status' => ['required', 'in:present,absent'],
-            'subject_id' => ['required', 'exists:subjects,id'],
+            'status' => ['required', 'string', 'in:present,absent'],
+            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
         ];
     }
 } 

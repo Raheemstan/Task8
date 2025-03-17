@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\Log;
 
 class ProcessAbsenceNotifications implements ShouldQueue
 {
@@ -31,10 +32,12 @@ class ProcessAbsenceNotifications implements ShouldQueue
             ->count();
 
         if ($monthlyAbsences === 5) {
+            Log::info('Sending absence warning notification to student', ['student' => $this->student->id]);
             $this->student->notify(new AbsenceWarning(5, 'month'));
         }
 
         if ($termAbsences === 10) {
+            Log::info('Sending suspension notice to student', ['student' => $this->student->id]);
             $this->student->notify(new SuspensionNotice());
         }
     }

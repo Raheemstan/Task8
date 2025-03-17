@@ -30,7 +30,7 @@ class ProcessAbsenceNotificationsTest extends TestCase
         $this->subject = Subject::factory()->create();
     }
 
-    /** @test */
+ 
     public function it_sends_warning_notification_for_five_monthly_absences()
     {
         // Create 5 absences in current month
@@ -52,7 +52,7 @@ class ProcessAbsenceNotificationsTest extends TestCase
         );
     }
 
-    /** @test */
+ 
     public function it_sends_suspension_notice_for_ten_term_absences()
     {
         // Create 10 absences in current term
@@ -71,7 +71,7 @@ class ProcessAbsenceNotificationsTest extends TestCase
         );
     }
 
-    /** @test */
+ 
     public function it_does_not_send_notifications_for_fewer_absences()
     {
         // Create only 3 absences

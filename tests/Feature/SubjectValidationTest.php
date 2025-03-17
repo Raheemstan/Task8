@@ -29,7 +29,7 @@ class SubjectValidationTest extends TestCase
         $this->student = Student::factory()->create(['class_id' => $this->class->id]);
     }
 
-    /** @test */
+ 
     public function it_validates_subject_exists()
     {
         $response = $this->postJson("/api/v1/attendance/{$this->student->id}", [
@@ -42,7 +42,7 @@ class SubjectValidationTest extends TestCase
             ->assertJsonValidationErrors(['subject_id']);
     }
 
-    /** @test */
+ 
     public function it_accepts_valid_subject()
     {
         $subject = Subject::factory()->create();
@@ -56,7 +56,7 @@ class SubjectValidationTest extends TestCase
         $response->assertStatus(201);
     }
 
-    /** @test */
+ 
     public function it_validates_subject_in_bulk_attendance()
     {
         $response = $this->postJson('/api/v1/attendance/bulk', [

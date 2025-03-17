@@ -10,16 +10,18 @@ return new class extends Migration
     {
         Schema::create('attendances', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained()->onDelete('cascade');
+            $table->foreignId('student_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('subject_id')->constrained()->cascadeOnDelete();
             $table->date('date');
             $table->enum('status', ['present', 'absent']);
-            $table->string('subject');
             $table->timestamps();
 
-            // Indexes for faster queries
-            $table->index(['student_id', 'date', 'status']);
-            $table->index(['date', 'status']); // For class-wide queries
-            $table->index(['student_id', 'status']); // For absence counting
+            // Add unique constraint
+            $table->unique(['student_id', 'subject_id', 'date'], 'unique_attendance');
+
+            // Add indexes for common queries
+            $table->index(['student_id', 'date']);
+            $table->index(['date', 'status']);
         });
     }
 
