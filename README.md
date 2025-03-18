@@ -38,26 +38,21 @@ A robust REST API system for managing student attendance, built with Laravel. Th
 
 ## Installation
 
-1. Clone the repository:
+### Clone the repository
 
-```bash
-git clone https://github.com/yourusername/student-attendance-api.git
-cd student-attendance-api
-```
-
-2. Install dependencies:
+### Install dependencies
 
 ```bash
 composer install
 ```
 
-3. Copy the environment file:
+### Copy the environment file
 
 ```bash
 cp .env.example .env
 ```
 
-4. Configure your database in `.env`:
+### Configure your database in `.env`
 
 ```env
 DB_CONNECTION=mysql
@@ -68,25 +63,25 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-5. Generate application key:
+### Generate application key
 
 ```bash
 php artisan key:generate
 ```
 
-6. Run migrations:
+### Run migrations
 
 ```bash
 php artisan migrate
 ```
 
-7. Start the queue worker:
+### Start the queue worker
 
 ```bash
 php artisan queue:work
 ```
 
-8. Seed the database with initial data:
+### Seed the database with initial data
 
 ```bash
 php artisan db:seed
@@ -98,7 +93,7 @@ php artisan db:seed
 
 All API endpoints require authentication using Laravel Sanctum. Include the bearer token in the Authorization header:
 
-```
+```json
 Authorization: Bearer <your_token>
 ```
 
@@ -158,6 +153,7 @@ php artisan test
 ```
 
 The system includes:
+
 - Feature tests for API endpoints
 - Unit tests for notification processing
 - Authentication testing
@@ -167,6 +163,7 @@ The system includes:
 ## Database Structure
 
 ### Students Table
+
 - id (primary key)
 - name
 - email (unique)
@@ -175,6 +172,7 @@ The system includes:
 - timestamps
 
 ### School Classes Table
+
 - id (primary key)
 - name
 - grade
@@ -183,6 +181,7 @@ The system includes:
 - timestamps
 
 ### Subjects Table
+
 - id (primary key)
 - name
 - code (unique)
@@ -190,6 +189,7 @@ The system includes:
 - timestamps
 
 ### Attendances Table
+
 - id (primary key)
 - student_id (foreign key)
 - subject_id (foreign key)
@@ -212,4 +212,3 @@ The system includes:
 3. **Queue Processing**
    - Asynchronous notification processing
    - Background job handling for absence notifications
-
